@@ -132,32 +132,37 @@ void handleE131Packet(e131_packet_t* p, IPAddress clientIP, byte protocol){
       return;  // nothing to do
       break;
 
-    case DMX_MODE_SINGLE_RGB: // RGB only
+    case DMX_MODE_SINGLE_RGB:     // 3 channel: [R,G,B]
+    case DMX_MODE_SINGLE_RGB_W:   // 4 channel: [R,G,B,W]
+      {
       if (uni != e131Universe) return;
-      if (availDMXLen < 3) return;
+        uint8_t dmxModeChannels = DMXMode == DMX_MODE_SINGLE_RGB ? 3 : 4;
+        if (availDMXLen < dmxModeChannels) return;
 
       realtimeLock(realtimeTimeoutMs, mde);
-
       if (realtimeOverride && !(realtimeMode && useMainSegmentOnly)) return;
 
-      wChannel = (availDMXLen > 3) ? e131_data[dataOffset+3] : 0;
+      wChannel = (dmxModeChannels == 4) ? e131_data[dataOffset+3] : 0;
       for (uint16_t i = 0; i < totalLen; i++)
         setRealtimePixel(i, e131_data[dataOffset+0], e131_data[dataOffset+1], e131_data[dataOffset+2], wChannel);
       break;
+      }
 
-    case DMX_MODE_SINGLE_DRGB: // Dimmer + RGB
+    case DMX_MODE_SINGLE_DRGB:    // 4 channel: [Dimmer,R,G,B]
+    case DMX_MODE_SINGLE_DRGB_W:  // 5 channel: [Dimmer,R,G,B,W]
       if (uni != e131Universe) return;
-      if (availDMXLen < 4) return;
+      uint8_t dmxModeChannels = DMXMode == DMX_MODE_SINGLE_DRGB ? 4 : 5;
+      if (availDMXLen < dmxModeChannels) return;
 
       realtimeLock(realtimeTimeoutMs, mde);
       if (realtimeOverride && !(realtimeMode && useMainSegmentOnly)) return;
-      wChannel = (availDMXLen > 4) ? e131_data[dataOffset+4] : 0;
 
-      if (bri != e131_data[dataOffset+0]) {
-        bri = e131_data[dataOffset+0];
+      if (bri != e131_data[dataOffset]) {
+        bri = e131_data[dataOffset];
         strip.setBrightness(bri, true);
       }
 
+      wChannel = (dmxModeChannels == 5) ? e131_data[dataOffset+4] : 0;
       for (uint16_t i = 0; i < totalLen; i++)
         setRealtimePixel(i, e131_data[dataOffset+1], e131_data[dataOffset+2], e131_data[dataOffset+3], wChannel);
       break;
@@ -279,6 +284,8 @@ void handleArtnetPollReply(IPAddress ipAddress) {
 
     case DMX_MODE_SINGLE_RGB:
     case DMX_MODE_SINGLE_DRGB:
+    case DMX_MODE_SINGLE_RGB_W:
+    case DMX_MODE_SINGLE_DRGB_W:
     case DMX_MODE_EFFECT:
       break;  // 1 universe is enough
 

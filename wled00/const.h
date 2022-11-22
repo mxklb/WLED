@@ -151,7 +151,8 @@
 #define DMX_MODE_MULTIPLE_RGB     4            //every LED is addressed with its own RGB (ledCount * 3 channels)
 #define DMX_MODE_MULTIPLE_DRGB    5            //every LED is addressed with its own RGB and share a master dimmer (ledCount * 3 + 1 channels)
 #define DMX_MODE_MULTIPLE_RGBW    6            //every LED is addressed with its own RGBW (ledCount * 4 channels)
-
+#define DMX_MODE_SINGLE_RGB_W     7            //all LEDs same RGBW color (4 channels)
+#define DMX_MODE_SINGLE_DRGB_W    8            //all LEDs same RGBW color and master dimmer (5 channels)
 //Light capability byte (unused) 0bRCCCTTTT
 //bits 0/1/2/3: specifies a type of LED driver. A single "driver" may have different chip models but must have the same protocol/behavior
 //bits 4/5/6: specifies the class of LED driver - 0b000 (dec. 0-15)  unconfigured/reserved
