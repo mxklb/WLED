@@ -196,14 +196,16 @@ void handleE131Packet(e131_packet_t* p, IPAddress clientIP, byte protocol){
           Segment& seg = strip.getSegment(id);
           
           wChannel = 0;
-          if (DMXMode == DMX_MODE_RGBW_SEGMENT)
-            wChannel = e131_data[dataOffset+3];
-          else if (DMXMode == DMX_MODE_DRGBW_SEGMENT)
-            wChannel = e131_data[dataOffset+4];
+          if (seg.hasWhite()) {
+            if (DMXMode == DMX_MODE_RGBW_SEGMENT)
+              wChannel = e131_data[dataOffset+3];
+            else if (DMXMode == DMX_MODE_DRGBW_SEGMENT)
+              wChannel = e131_data[dataOffset+4];
+          }
           
           uint32_t color;
           bool hasDimmerChannel;
-          if (DMXMode == DMX_MODE_RGB_SEGMENT || DMXMode == DMX_MODE_RGBW_SEGMENT){
+          if (DMXMode == DMX_MODE_RGB_SEGMENT || DMXMode == DMX_MODE_RGBW_SEGMENT) {
             color = RGBW32(e131_data[dataOffset+0], e131_data[dataOffset+1], e131_data[dataOffset+2], wChannel);
             hasDimmerChannel = false;
           }
@@ -214,7 +216,7 @@ void handleE131Packet(e131_packet_t* p, IPAddress clientIP, byte protocol){
 
           // Set global brightness or segment opacity
           if (hasDimmerChannel) {
-            if (strip.getSegmentsNum() == 1){
+            if (strip.getSegmentsNum() == 1) {
               if (bri != e131_data[dataOffset]) {
                 bri = e131_data[dataOffset];
                 strip.setBrightness(bri, true);
