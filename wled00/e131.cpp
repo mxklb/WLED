@@ -185,12 +185,15 @@ void handleE131Packet(e131_packet_t* p, IPAddress clientIP, byte protocol){
         uint8_t dmxChannelCount = (DMXMode == DMX_MODE_RGBW_SEGMENT || DMXMode == DMX_MODE_DRGB_SEGMENT) ? 4 : 3;
         if (DMXMode == DMX_MODE_DRGBW_SEGMENT) dmxChannelCount = 5;
         if (availDMXLen < dmxChannelCount) return;
+        // Disable modes for main segment only
+        if (useMainSegmentOnly) return;
 
         realtimeLock(realtimeTimeoutMs, mde);
         if (realtimeOverride && !(realtimeMode && useMainSegmentOnly)) return;
-
+        
+        uint8_t segId = 0;
         for (uint8_t id = 0; id < strip.getSegmentsNum(); id++) {
-          dataOffset = DMXAddress + id * (dmxChannelCount + DMXSegmentSpacing);
+          dataOffset = DMXAddress + segId * (dmxChannelCount + DMXSegmentSpacing);
           // Modify address for Art-Net data
           if (protocol == P_ARTNET && dataOffset > 0)
             dataOffset--;
@@ -198,7 +201,10 @@ void handleE131Packet(e131_packet_t* p, IPAddress clientIP, byte protocol){
           if (dataOffset > dmxChannels - dmxChannelCount + 1)
             return;
           Segment& seg = strip.getSegment(id);
-          
+          // Always skip main segment DMX address (if others exist)
+          if (id != strip.getMainSegmentId()) segId++;
+          else if(strip.getSegmentsNum() > 1) continue;
+
           wChannel = 0;
           if (seg.hasWhite()) {
             if (DMXMode == DMX_MODE_RGBW_SEGMENT)
@@ -208,32 +214,19 @@ void handleE131Packet(e131_packet_t* p, IPAddress clientIP, byte protocol){
           }
           
           uint32_t color;
-          bool hasDimmerChannel;
           if (DMXMode == DMX_MODE_RGB_SEGMENT || DMXMode == DMX_MODE_RGBW_SEGMENT) {
             color = RGBW32(e131_data[dataOffset+0], e131_data[dataOffset+1], e131_data[dataOffset+2], wChannel);
-            hasDimmerChannel = false;
           }
-          else {
+          else { // also set segment opacity
             color = RGBW32(e131_data[dataOffset+1], e131_data[dataOffset+2], e131_data[dataOffset+3], wChannel);
-            hasDimmerChannel = true;
-          }
-
-          // Set global brightness or segment opacity
-          if (hasDimmerChannel) {
-            if (strip.getSegmentsNum() == 1) {
-              if (bri != e131_data[dataOffset]) {
-                bri = e131_data[dataOffset];
-                strip.setBrightness(bri, true);
-              }
-            }
-            else if (e131_data[dataOffset] != seg.opacity) seg.setOpacity(e131_data[dataOffset]);
+            if (e131_data[dataOffset] != seg.opacity) seg.setOpacity(e131_data[dataOffset]);
           }
 
           // Set solid segment color
           for (uint16_t pix = 0; pix < seg.length(); pix++)
             seg.setPixelColor(pix, color);
         }
-        break;  
+        break;
       }
 
     case DMX_MODE_PRESET:       // 2 channel: [Dimmer,Preset]
